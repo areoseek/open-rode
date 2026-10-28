@@ -1,0 +1,16 @@
+# Open Rode: let the logged-in user talk to RODE devices (USB vendor 0x19f7).
+#
+# The Wireless GO II is configured over a vendor HID interface (/dev/hidrawN),
+# which is root-only by default. TAG+="uaccess" makes systemd-logind grant an
+# ACL to the user at the seat, so no group changes or logout are needed.
+#
+# Install:
+#   sudo install -m 0644 70-open-rode.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   then unplug and replug the receiver
+#
+# Credit: rule shape from lgnap/rode-raconteur.
+
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f7", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="19f7", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="block", ATTRS{idVendor}=="19f7", MODE="0660", TAG+="uaccess"

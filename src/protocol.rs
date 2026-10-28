@@ -201,7 +201,7 @@ pub fn tx_button_bundle(rec: RecordMode, btn: TxButton) -> [(u8, u8); 6] {
 pub struct TxStatus {
     pub serial: u32,
     /// Bytes 4..8. A unix timestamp (2024-12-22 on this unit); build date or
-    /// last-sync time — not yet confirmed.
+    /// last-sync time, not yet confirmed.
     pub timestamp: u32,
     pub fw_major: u8,
     pub fw_minor: u8,

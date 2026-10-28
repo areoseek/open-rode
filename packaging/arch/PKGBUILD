@@ -1,0 +1,29 @@
+# Maintainer: areoseek
+pkgname=open-rode
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Open source Linux client for the RODE Wireless GO II (GUI and CLI)"
+arch=('x86_64')
+url="https://github.com/areoseek/open-rode"
+license=('MIT')
+options=('!lto')
+install=open-rode.install
+depends=('glibc' 'gcc-libs' 'systemd-libs' 'libxkbcommon' 'wayland' 'libglvnd' 'fontconfig')
+makedepends=('rust')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/areoseek/open-rode/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  cd "$pkgname-$pkgver"
+  cargo build --release --locked
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  install -Dm755 target/release/open-rode "$pkgdir/usr/bin/open-rode"
+  install -Dm755 target/release/open-rode-cli "$pkgdir/usr/bin/open-rode-cli"
+  install -Dm644 open-rode.desktop "$pkgdir/usr/share/applications/open-rode.desktop"
+  install -Dm644 udev/70-open-rode.rules "$pkgdir/usr/lib/udev/rules.d/70-open-rode.rules"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

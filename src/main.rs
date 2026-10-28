@@ -1,12 +1,12 @@
-//! rode-central: native Linux GUI for the RØDE Wireless GO II.
+//! open-rode: native Linux GUI for the RØDE Wireless GO II.
 //!
 //! Device I/O runs on a worker thread; the UI sends `Action`s and receives
 //! `Snapshot`s so a slow HID transaction never freezes the window.
 
 use eframe::egui::{self, Color32, RichText};
 use hidapi::HidApi;
-use rode_central_linux::device::{device_now, GoII, Snapshot};
-use rode_central_linux::protocol::{self as p, ChannelMode, GainMode, RecordMode, RxButton, TxButton, TxLed};
+use open_rode::device::{device_now, GoII, Snapshot};
+use open_rode::protocol::{self as p, ChannelMode, GainMode, RecordMode, RxButton, TxButton, TxLed};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -184,7 +184,7 @@ impl eframe::App for App {
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.heading("RØDE Central (Linux)");
+                ui.heading("Open Rode");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label(&self.status);
                 });
@@ -331,8 +331,8 @@ impl eframe::App for App {
 fn main() -> eframe::Result {
     env_logger::init();
     let opts = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([960.0, 620.0]).with_title("RØDE Central (Linux)"),
+        viewport: egui::ViewportBuilder::default().with_inner_size([960.0, 620.0]).with_title("Open Rode"),
         ..Default::default()
     };
-    eframe::run_native("rode-central-linux", opts, Box::new(|_| Ok(Box::new(App::new()))))
+    eframe::run_native("open-rode", opts, Box::new(|_| Ok(Box::new(App::new()))))
 }

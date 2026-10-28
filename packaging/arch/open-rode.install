@@ -1,0 +1,8 @@
+post_install() {
+  udevadm control --reload-rules 2>/dev/null || true
+  echo "open-rode: unplug and replug the Wireless GO II receiver so the udev rule applies."
+}
+
+post_upgrade() {
+  post_install
+}

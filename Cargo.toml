@@ -1,17 +1,22 @@
 [package]
-name = "rode-central-linux"
+name = "open-rode"
 version = "0.1.0"
 edition = "2021"
-description = "Native Linux control app for RØDE wireless microphone systems (Wireless GO II / PRO / Micro / ME)"
+description = "Open source Linux client for the RODE Wireless GO II"
 license = "MIT"
+repository = "https://github.com/areoseek/open-rode"
+
+[lib]
+name = "open_rode"
+path = "src/lib.rs"
 
 [[bin]]
-name = "rode-probe"
-path = "src/bin/probe.rs"
-
-[[bin]]
-name = "rode-central"
+name = "open-rode"
 path = "src/main.rs"
+
+[[bin]]
+name = "open-rode-cli"
+path = "src/bin/probe.rs"
 
 [dependencies]
 hidapi = { version = "2", default-features = false, features = ["linux-static-hidraw"] }
@@ -26,3 +31,4 @@ chrono = "0.4"
 
 [profile.release]
 opt-level = 2
+strip = true

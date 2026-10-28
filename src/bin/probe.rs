@@ -1,28 +1,28 @@
-//! rode-probe: CLI for the Wireless GO II (and raw HID exploration).
+//! open-rode-cli: CLI for the Wireless GO II (and raw HID exploration).
 //!
-//!   rode-probe list                       enumerate RØDE HID interfaces
-//!   rode-probe desc                       dump + decode the report descriptor
-//!   rode-probe status                     everything we can read
-//!   rode-probe get <op>                   GET a report-9 register
-//!   rode-probe gain <coarse|fine|camera> [value]
-//!   rode-probe channel <split|merged> [--safety]
-//!   rode-probe safety <on|off>
-//!   rode-probe autodim <on|off>
-//!   rode-probe rx-button <autodim|marker>
-//!   rode-probe sync-clock                 RX + TX clock = now
-//!   rode-probe tx-led <bright|dim>
-//!   rode-probe tx-pad <on|off>
-//!   rode-probe tx-compress <on|off>
-//!   rode-probe tx-record <off|always|manual|backup> [--button mute|marker|record|disabled]
-//!   rode-probe send <hex> [--len 17]      raw frame, prints the reply
-//!   rode-probe listen [--seconds N]       print unsolicited input reports
+//!   open-rode-cli list                       enumerate RØDE HID interfaces
+//!   open-rode-cli desc                       dump + decode the report descriptor
+//!   open-rode-cli status                     everything we can read
+//!   open-rode-cli get <op>                   GET a report-9 register
+//!   open-rode-cli gain <coarse|fine|camera> [value]
+//!   open-rode-cli channel <split|merged> [--safety]
+//!   open-rode-cli safety <on|off>
+//!   open-rode-cli autodim <on|off>
+//!   open-rode-cli rx-button <autodim|marker>
+//!   open-rode-cli sync-clock                 RX + TX clock = now
+//!   open-rode-cli tx-led <bright|dim>
+//!   open-rode-cli tx-pad <on|off>
+//!   open-rode-cli tx-compress <on|off>
+//!   open-rode-cli tx-record <off|always|manual|backup> [--button mute|marker|record|disabled]
+//!   open-rode-cli send <hex> [--len 17]      raw frame, prints the reply
+//!   open-rode-cli listen [--seconds N]       print unsolicited input reports
 
 use anyhow::{bail, Result};
 use clap::{Parser, Subcommand};
 use hidapi::HidApi;
-use rode_central_linux::device::GoII;
-use rode_central_linux::hid::{enumerate, RodeHid, RodeHidInfo};
-use rode_central_linux::protocol::{self as p, ChannelMode, GainMode, Model, RecordMode, RxButton, TxButton, TxLed};
+use open_rode::device::GoII;
+use open_rode::hid::{enumerate, RodeHid, RodeHidInfo};
+use open_rode::protocol::{self as p, ChannelMode, GainMode, Model, RecordMode, RxButton, TxButton, TxLed};
 use std::time::Duration;
 
 #[derive(Parser)]
@@ -91,7 +91,7 @@ fn on_off(s: &str) -> Result<bool> {
 }
 
 fn now() -> u32 {
-    rode_central_linux::device::device_now()
+    open_rode::device::device_now()
 }
 
 fn print_desc(d: &[u8]) {
