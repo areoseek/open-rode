@@ -4,6 +4,8 @@
 It configures the RODE Wireless GO II (receiver on USB, transmitters through it)
 natively: no Wine, no kernel module, no RODE account.
 
+![Open Rode main window showing the Wireless GO II receiver and transmitter settings](docs/screenshot.png)
+
 RODE ships RODE Central for Windows and macOS only. Under the hood that app is a
 Flutter shell over a C++ library that talks to the microphones with
 vendor-specific USB HID reports. Linux already exposes those as `/dev/hidrawN`,
