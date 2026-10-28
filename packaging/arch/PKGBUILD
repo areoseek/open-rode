@@ -11,7 +11,7 @@ install=open-rode.install
 depends=('glibc' 'gcc-libs' 'systemd-libs' 'alsa-lib' 'pipewire-alsa' 'libxkbcommon' 'wayland' 'libglvnd' 'fontconfig')
 makedepends=('rust')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/areoseek/open-rode/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('c2a3eacdc8fa79f303835dbcff4f4c1ec4c073754a5277cf3110336316cb4e58')
 
 build() {
   cd "$pkgname-$pkgver"
