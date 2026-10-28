@@ -5,6 +5,7 @@
 
 use eframe::egui::{self, Color32, RichText};
 use hidapi::HidApi;
+use open_rode::audio::{dbfs, AudioSource, Meter};
 use open_rode::device::{device_now, GoII, Snapshot};
 use open_rode::protocol::{self as p, ChannelMode, GainMode, RecordMode, RxButton, TxButton, TxLed};
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -105,6 +106,14 @@ struct App {
     rec_mode: RecordMode,
     tx_button: TxButton,
     tx_pad: bool,
+    audio_src: AudioSource,
+    meter: Option<Meter>,
+    meter_err: String,
+    meter_next_try: Instant,
+    /// smoothed RMS and held peak per channel, in dBFS
+    meter_rms: [f32; 2],
+    meter_peak: [f32; 2],
+    meter_peak_at: [Instant; 2],
 }
 
 impl App {
@@ -118,6 +127,43 @@ impl App {
             channel: ChannelMode::Split, safety: false, auto_dim: true, rx_button: RxButton::AutoDim,
             gain_mode: GainMode::Fine, fine_step: 10, coarse_level: 0,
             rec_mode: RecordMode::Off, tx_button: TxButton::Marker, tx_pad: false,
+            audio_src: AudioSource::default(), meter: None, meter_err: String::new(),
+            meter_next_try: Instant::now(), meter_rms: [-140.0; 2], meter_peak: [-140.0; 2],
+            meter_peak_at: [Instant::now(); 2],
+        }
+    }
+
+    /// Keep the capture stream alive while a receiver is connected; retry
+    /// quietly if the sound card is not up yet or is busy.
+    fn tick_audio(&mut self) {
+        if !self.connected {
+            self.meter = None;
+            return;
+        }
+        if self.meter.is_none() && Instant::now() >= self.meter_next_try {
+            self.meter_next_try = Instant::now() + Duration::from_secs(3);
+            self.audio_src = AudioSource::discover();
+            if self.audio_src.present() {
+                match Meter::open(&self.audio_src) {
+                    Ok(m) => { self.meter = Some(m); self.meter_err.clear(); }
+                    Err(e) => self.meter_err = format!("{e:#}"),
+                }
+            } else {
+                self.meter_err = "sound card not found (snd-usb-audio)".into();
+            }
+        }
+        if let Some(m) = &self.meter {
+            let lv = m.read();
+            for c in 0..2 {
+                let rms = dbfs(lv[c].rms);
+                let peak = dbfs(lv[c].peak);
+                // fast attack, ~20 dB/s release
+                self.meter_rms[c] = if rms > self.meter_rms[c] { rms } else { (self.meter_rms[c] - 0.7).max(rms) };
+                if peak >= self.meter_peak[c] || self.meter_peak_at[c].elapsed() > Duration::from_millis(1500) {
+                    self.meter_peak[c] = peak;
+                    self.meter_peak_at[c] = Instant::now();
+                }
+            }
         }
     }
 
@@ -164,6 +210,30 @@ fn battery_text(pct: u8) -> RichText {
     RichText::new(format!("{pct}%")).color(c).strong()
 }
 
+/// Horizontal level bar, -70..0 dBFS, with a held peak tick.
+fn meter_bar(ui: &mut egui::Ui, label: &str, rms_db: f32, peak_db: f32) {
+    ui.horizontal(|ui| {
+        ui.add_sized([34.0, 18.0], egui::Label::new(label));
+        let (rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width() - 70.0, 14.0), egui::Sense::hover());
+        let p = ui.painter();
+        p.rect_filled(rect, 3.0, Color32::from_gray(40));
+        let frac = |db: f32| ((db + 70.0) / 70.0).clamp(0.0, 1.0);
+        let fill = egui::Rect::from_min_size(rect.min, egui::vec2(rect.width() * frac(rms_db), rect.height()));
+        let color = if rms_db > -6.0 { Color32::from_rgb(220, 70, 70) } else if rms_db > -18.0 { Color32::from_rgb(230, 180, 60) } else { Color32::from_rgb(90, 200, 110) };
+        p.rect_filled(fill, 3.0, color);
+        for mark in [-60.0, -48.0, -36.0, -24.0, -12.0] {
+            let x = rect.min.x + rect.width() * frac(mark);
+            p.line_segment([egui::pos2(x, rect.min.y), egui::pos2(x, rect.max.y)], (1.0, Color32::from_gray(70)));
+        }
+        if peak_db > -70.0 {
+            let x = rect.min.x + rect.width() * frac(peak_db);
+            p.line_segment([egui::pos2(x, rect.min.y), egui::pos2(x, rect.max.y)], (2.0, Color32::WHITE));
+        }
+        let txt = if peak_db <= -100.0 { "silent".to_string() } else { format!("{peak_db:5.1} dB") };
+        ui.add_sized([64.0, 18.0], egui::Label::new(RichText::new(txt).monospace().small()));
+    });
+}
+
 fn seg<T: PartialEq + Copy>(ui: &mut egui::Ui, current: &mut T, options: &[(T, &str)]) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
@@ -180,7 +250,8 @@ fn seg<T: PartialEq + Copy>(ui: &mut egui::Ui, current: &mut T, options: &[(T, &
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.drain();
-        ctx.request_repaint_after(Duration::from_millis(500));
+        self.tick_audio();
+        ctx.request_repaint_after(if self.meter.is_some() { Duration::from_millis(33) } else { Duration::from_millis(500) });
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -261,6 +332,28 @@ impl eframe::App for App {
                         self.send(Action::AutoDim(self.auto_dim));
                     }
                     ui.add_space(8.0);
+
+                    ui.strong("Audio input");
+                    match self.audio_src.pw_description.clone().or_else(|| self.audio_src.alsa_card.as_ref().map(|c| format!("hw:{c}"))) {
+                        Some(name) => {
+                            ui.horizontal_wrapped(|ui| {
+                                ui.label("Shows up in apps as");
+                                ui.label(RichText::new(name).strong());
+                            });
+                            ui.small(format!(
+                                "2 ch, 24-bit, 48 kHz.  ALSA hw:{}  {}",
+                                self.audio_src.alsa_card.clone().unwrap_or_default(),
+                                self.audio_src.pw_node.clone().map(|n| format!("  PipeWire {n}")).unwrap_or_default()
+                            ));
+                        }
+                        None => { ui.small(if self.meter_err.is_empty() { "looking for the sound card".to_string() } else { self.meter_err.clone() }); }
+                    }
+                    let left = if self.channel == ChannelMode::Merged { "Mix" } else { "TX1" };
+                    let right = if self.safety { "Safe" } else if self.channel == ChannelMode::Merged { "Mix" } else { "TX2" };
+                    meter_bar(ui, left, self.meter_rms[0], self.meter_peak[0]);
+                    meter_bar(ui, right, self.meter_rms[1], self.meter_peak[1]);
+                    if let Some(m) = &self.meter { ui.small(format!("via {}", m.via)); } else if !self.meter_err.is_empty() { ui.small(&self.meter_err); }
+                    ui.add_space(8.0);
                     ui.horizontal(|ui| {
                         let drift = snap.rx_clock as i64 - device_now() as i64;
                         ui.label(format!("Device clock: {drift:+} s vs this PC"));
@@ -331,7 +424,7 @@ impl eframe::App for App {
 fn main() -> eframe::Result {
     env_logger::init();
     let opts = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([960.0, 620.0]).with_title("Open Rode"),
+        viewport: egui::ViewportBuilder::default().with_inner_size([980.0, 600.0]).with_title("Open Rode"),
         ..Default::default()
     };
     eframe::run_native("open-rode", opts, Box::new(|_| Ok(Box::new(App::new()))))

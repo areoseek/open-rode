@@ -1,6 +1,6 @@
 [package]
 name = "open-rode"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "Open source Linux client for the RODE Wireless GO II"
 license = "MIT"
@@ -28,6 +28,7 @@ hex = "0.4"
 log = "0.4"
 env_logger = "0.11"
 chrono = "0.4"
+cpal = "0.15"
 
 [profile.release]
 opt-level = 2

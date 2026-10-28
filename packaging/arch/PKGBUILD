@@ -1,6 +1,6 @@
 # Maintainer: areoseek
 pkgname=open-rode
-pkgver=0.1.0
+pkgver=0.2.0
 pkgrel=1
 pkgdesc="Open source Linux client for the RODE Wireless GO II (GUI and CLI)"
 arch=('x86_64')
@@ -8,10 +8,10 @@ url="https://github.com/areoseek/open-rode"
 license=('MIT')
 options=('!lto')
 install=open-rode.install
-depends=('glibc' 'gcc-libs' 'systemd-libs' 'libxkbcommon' 'wayland' 'libglvnd' 'fontconfig')
+depends=('glibc' 'gcc-libs' 'systemd-libs' 'alsa-lib' 'pipewire-alsa' 'libxkbcommon' 'wayland' 'libglvnd' 'fontconfig')
 makedepends=('rust')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/areoseek/open-rode/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('5972bf2927e1ec0e5fdb5703de50ecdb7c9b1dbe4efaa4c242fa8026da290556')
+sha256sums=('SKIP')
 
 build() {
   cd "$pkgname-$pkgver"

@@ -31,9 +31,18 @@ RODE Microphones.
 | Output gain: Coarse (3 levels), Fine (-30 to 0 dB in 3 dB steps), Camera | Button function: Disabled, Mute, Marker, Record |
 | Button function: toggle auto-dim or drop a marker | LED brightness: Bright or Dim |
 | Auto-dim | Input PAD |
+| Live input meters (TX1 / TX2 or safety channel) and the name the system gives the audio source | |
 
 Everything above is read back from the device, so the window always shows the
 real state, including changes made on the hardware itself.
+
+The receiver is also a normal USB sound card (2 channels, 24-bit, 48 kHz, left
+= TX1, right = TX2 or the safety channel). Linux handles that by itself through
+`snd-usb-audio`; Open Rode shows the name PipeWire gives it (for example
+"Wireless GO II RX Pro") so you can find it in OBS, Discord or a DAW, and draws
+level meters from the same stream through PipeWire, so it never blocks another
+app from recording. Note that the receiver's output gain setting only affects
+the 3.5 mm jack; the USB stream is always at unity.
 
 Not implemented: firmware updates (a separate bulk-transfer path that is left
 alone on purpose), factory reset, renaming, diagnostics, and a recordings
@@ -48,7 +57,7 @@ A prebuilt package is attached to each release on the
 [releases page](https://github.com/areoseek/open-rode/releases):
 
 ```sh
-sudo pacman -U open-rode-0.1.0-1-x86_64.pkg.tar.zst
+sudo pacman -U open-rode-0.2.0-1-x86_64.pkg.tar.zst
 ```
 
 Then unplug and replug the receiver so the bundled udev rule takes effect. Start
@@ -59,11 +68,12 @@ To build the package yourself: `cd packaging/arch && makepkg -si`.
 ### Other distributions (build from source)
 
 You need a Rust toolchain (1.80 or newer, via [rustup](https://rustup.rs)), a C
-compiler, pkg-config, and the development headers for libudev, Wayland or X11,
-libxkbcommon and OpenGL. On Debian or Ubuntu:
+compiler, pkg-config, and the development headers for libudev, ALSA, Wayland or
+X11, libxkbcommon and OpenGL. For the meters to share the device with other
+apps you also want PipeWire's ALSA plugin (`pipewire-alsa`). On Debian or Ubuntu:
 
 ```sh
-sudo apt install build-essential pkg-config libudev-dev libwayland-dev \
+sudo apt install build-essential pkg-config libudev-dev libasound2-dev libwayland-dev \
     libxkbcommon-dev libgl1-mesa-dev libxcb1-dev libxcb-render0-dev \
     libxcb-shape0-dev libxcb-xfixes0-dev libfontconfig1-dev
 ```
@@ -71,7 +81,7 @@ sudo apt install build-essential pkg-config libudev-dev libwayland-dev \
 On Fedora:
 
 ```sh
-sudo dnf install gcc pkgconf-pkg-config systemd-devel wayland-devel \
+sudo dnf install gcc pkgconf-pkg-config systemd-devel alsa-lib-devel wayland-devel \
     libxkbcommon-devel mesa-libGL-devel fontconfig-devel
 ```
 
@@ -207,6 +217,7 @@ Open Rode never sends it.
 src/protocol.rs   opcodes, enums, frame builders, TX status decoding
 src/hid.rs        hidraw transport (hidapi)
 src/device.rs     typed getters and setters for the GO II
+src/audio.rs      sound card discovery and the level meter (cpal via PipeWire)
 src/main.rs       egui GUI
 src/bin/probe.rs  open-rode-cli
 tools/            capture of RODE Central's HID traffic and the scripts used to decode it
