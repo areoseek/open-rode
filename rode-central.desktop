@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=RØDE Central (Linux)
+Comment=Configure the RØDE Wireless GO II
+Exec=rode-central
+Icon=audio-input-microphone
+Terminal=false
+Categories=AudioVideo;Audio;Settings;

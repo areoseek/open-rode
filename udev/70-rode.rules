@@ -1,0 +1,31 @@
+# RØDE Microphones (USB vendor 0x19f7) — user access to HID and USB nodes.
+#
+# RØDE's own software (RODE Central) does not talk to these devices over USB
+# audio.  It drives them through a vendor-specific HID channel, i.e. the
+# /dev/hidrawN nodes.  Those default to root:root 0600, so anything running as
+# your user — including Wine — gets EACCES and reports "no devices found".
+#
+# TAG+="uaccess" makes systemd-logind put an ACL on the seat-local user.  This
+# is preferable to a plugdev group: no group to create, no logout required, and
+# access disappears cleanly when the session ends.
+#
+# Install:
+#   sudo install -m 0644 70-rode.rules /etc/udev/rules.d/70-rode.rules
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger --action=add /sys/class/hidraw/hidraw*
+#
+# NOTE: `udevadm trigger --attr-match=idVendor=19f7` does NOT match hidraw
+# nodes.  --attr-match only tests the device's own attributes, and idVendor
+# lives on the parent USB device.  The rule below is fine — it uses ATTRS,
+# which walks up the parent chain — but the trigger must target sysfs paths.
+
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f7", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="19f7", MODE="0660", TAG+="uaccess"
+
+# The onboard recordings are a block device, and reaching them needs the same
+# treatment.  A removable USB volume usually gets an ACL from systemd's own
+# seat handling, so this looks redundant until it is not: after an erase the
+# transmitter re-enumerates and presents its own storage node, which arrives
+# as root:root 0600 with no seat tag at all.  Without this line that node is
+# unreachable, and the only clue is a bare "Permission denied".
+SUBSYSTEM=="block", ATTRS{idVendor}=="19f7", MODE="0660", TAG+="uaccess"
